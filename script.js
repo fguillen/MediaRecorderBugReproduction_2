@@ -4,14 +4,16 @@ const videoElement = document.querySelector("#video-wrapper video");
 const startButton = document.querySelector("#start-recording-button");
 
 async function initFullStream() {
-  fullStream = new MediaStream();
+  // fullStream = new MediaStream();
 
   // Getting screenStream
   const screenStream =
     await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
 
   // Screen Stream
-  const screenTrack = screenStream.getVideoTracks()[0]
+  // const videoTrack = getVideoTrack();
+  const videoTrack = screenStream.getVideoTracks()[0];
+
 
   // Silenced AudioStream
   const audioCtx = new AudioContext();
@@ -23,16 +25,35 @@ async function initFullStream() {
   oscillator.connect(gainNode);
   gainNode.connect(audioDestination);
 
-  const silencedAudioTrack = audioDestination.stream.getAudioTracks()[0];
+  const audioTrack = audioDestination.stream.getAudioTracks()[0];
 
   // Add tracks
-  fullStream.addTrack(screenTrack);
-  fullStream.addTrack(silencedAudioTrack); // If I comment this line the recording works good
+  // fullStream = new MediaStream([videoTrack, audioTrack]);
+
+  fullStream = new MediaStream();
+  fullStream.addTrack(videoTrack);
+  fullStream.addTrack(audioTrack); // If I comment this line the recording works good
 }
 
 function playStream() {
   videoElement.srcObject = fullStream;
   videoElement.play();
+}
+
+function getVideoTrack() {
+  const ctx = document.createElement("canvas").getContext("2d");
+  const img = new ImageData(300, 150);
+  const arr = new Uint32Array(img.data.buffer);
+  draw();
+  return ctx.canvas.captureStream().getVideoTracks()[0];
+
+  function draw() {
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = Math.random() * 0xFFFFFF + 0xFF000000;
+    }
+    ctx.putImageData(img, 0, 0);
+    requestAnimationFrame(draw);
+  }
 }
 
 function record() {
