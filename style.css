@@ -1,0 +1,13 @@
+#video-wrapper {
+  position: relative;
+  width: 500px;
+}
+
+#video-wrapper video {
+  width: 100% !important;
+  height: auto !important;
+}
+
+#start-recording-button {
+  background-color: brown;
+}
