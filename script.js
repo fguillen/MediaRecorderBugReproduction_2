@@ -1,21 +1,14 @@
 let fullStream;
 let counter = 0;
-const videoElement = document.querySelector("#video-wrapper video");
-const startButton = document.querySelector("#start-recording-button");
+const startButton = document.querySelegetElementByIdctor("start-button");
+const requestDataButton = document.getElementById("request-data-button");
 
 async function initFullStream() {
-  // fullStream = new MediaStream();
-
-  // Getting screenStream
-  const screenStream =
-    await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-
-  // Screen Stream
-  // const videoTrack = getVideoTrack();
-  const videoTrack = screenStream.getVideoTracks()[0];
+  // Video Track
+  const videoTrack = getVideoTrack();
 
 
-  // Silenced AudioStream
+  // Audio Track
   const audioCtx = new AudioContext();
   const audioDestination = audioCtx.createMediaStreamDestination();
   const oscillator = audioCtx.createOscillator();
@@ -27,17 +20,10 @@ async function initFullStream() {
 
   const audioTrack = audioDestination.stream.getAudioTracks()[0];
 
-  // Add tracks
-  // fullStream = new MediaStream([videoTrack, audioTrack]);
-
+  // Full Stream
   fullStream = new MediaStream();
   fullStream.addTrack(videoTrack);
   fullStream.addTrack(audioTrack); // If I comment this line the recording works good
-}
-
-function playStream() {
-  videoElement.srcObject = fullStream;
-  videoElement.play();
 }
 
 function getVideoTrack() {
@@ -61,7 +47,7 @@ function record() {
 
   // Set up MediaRecorder
   const recordedChunks = [];
-  const mediaRecorder = new MediaRecorder(fullStream, { mimeType: "video/webm" });
+  const mediaRecorder = new MediaRecorder(fullStream);
   mediaRecorder.ondataavailable = (event) => {
     console.log(`MediaRecorder.ondataavailable().data.size (${counter}): ${event.data.size}`);
     counter++;
@@ -70,13 +56,20 @@ function record() {
   mediaRecorder.start(1000); // ondataavailable each 1 seconds
 }
 
+async function startRecording() {
+  startButton.setAttribute("disabled", true);
+  await initFullStream();
+  record();
+}
+
+function requestData() {
+  recorder.requestData();
+}
+
 startButton.addEventListener("click", () => {
   startRecording();
 });
 
-async function startRecording() {
-  startButton.setAttribute("disabled", true);
-  await initFullStream();
-  playStream();
-  record();
-}
+requestDataButton.addEventListener("click", () => {
+  requestData();
+});

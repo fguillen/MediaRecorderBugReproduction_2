@@ -1,0 +1,41 @@
+<pre></pre>
+<button>start</button>
+
+<script>
+const _log = document.querySelector("pre");
+const button = document.querySelector("button");
+
+button.onclick = () => {
+  const video_track = getVideoTrack();
+  const audio = { context: new AudioContext() };
+  const streamDestination = audio.context.createMediaStreamDestination();
+  const osc = audio.context.createOscillator();
+  const gainNode = audio.context.createGain();
+  gainNode.gain.value = 0;
+  osc.connect(gainNode);
+  gainNode.connect(streamDestination);
+  const audio_track = streamDestination.stream.getAudioTracks()[ 0 ];
+  const stream = new MediaStream([ video_track, audio_track ]);
+  const recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = e => {
+    _log.textContent = `produced a Blob of ${ e.data.size }bytes`;
+  };
+  recorder.start(1000);
+  button.textContent = "stop";
+  button.onclick = evt => recorder.stop();
+};
+
+// returns a 300x150px VideoTrack of noise
+function getVideoTrack() {
+  const ctx = document.createElement("canvas").getContext("2d");
+  const img = new ImageData(300,150);
+  const arr = new Uint32Array(img.data.buffer);
+  draw();
+  return ctx.canvas.captureStream().getVideoTracks()[ 0 ];
+
+  function draw() {
+  for( let i = 0; i < arr.length; i++ ) { arr[ i ]=Math.random() * 0xFFFFFF + 0xFF000000; } ctx.putImageData(img, 0, 0);
+    requestAnimationFrame(draw);
+  }
+}
+</script>
