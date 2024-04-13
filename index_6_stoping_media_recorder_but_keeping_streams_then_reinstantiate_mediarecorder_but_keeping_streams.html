@@ -1,0 +1,147 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset=utf-8>
+  <title>Testing MediaRecorder</title>
+</head>
+
+<body>
+  <p>In this demo the Process starts the Streams and then starts the MediaRecorder. Each
+    200ms the <i>MediaRecorder.stop()</i> is invoked
+    and after finished <i>MediaRecorder.start()</i> again.
+  </p>
+  <p>
+    <i>Stop Process</i> button will invoke <i>MediaRecorder.stop()</i>. But not stop the <i>Streams</i>
+  </p>
+  <p>
+    <i>Start Process</i> button will invoke generate a new instance of MediaRecorder and invoke
+    <i>MediaRecorder.start()</i>. But not restart the <i>Streams</i>
+  </p>
+  <p style="background-color: yellow;">
+    What we see is that even stopping and starting the MediaRecorder the MediaRecorder
+    starts generating 0bytes blobs after a while. Then even if the <b>MediaRecorder is re-instantiate</b>
+    (but reusing the same Streams)
+    the blobs are still 0bytes.
+  </p>
+  <button id="start-button">Start Process</button>
+  <button id="stop-button" disabled>Stop Process</button>
+  <pre></pre>
+</body>
+
+<script>
+  let fullStream;
+  let counter = 0;
+  let intervalID;
+
+  const logElement = document.querySelector("pre");
+  const startButton = document.getElementById("start-button");
+  const stopButton = document.getElementById("stop-button");
+  let recorder;
+  let running = false;
+
+  function initStreams() {
+    log("initStreams");
+
+    // Video Track
+    const videoTrack = getVideoTrack();
+
+    // Audio Track
+    const audioCtx = new AudioContext();
+    const audioDestination = audioCtx.createMediaStreamDestination();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = 0;
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioDestination);
+
+    const audioTrack = audioDestination.stream.getAudioTracks()[0];
+
+    // Full Stream
+    fullStream = new MediaStream();
+    fullStream.addTrack(videoTrack);
+    fullStream.addTrack(audioTrack); // If I comment this line the recording works good
+  }
+
+  function initMediaRecorder() {
+    log("initMediaRecorder");
+
+    recorder = new MediaRecorder(fullStream);
+    recorder.ondataavailable = (event) => {
+      log(`(${counter.toString().padStart(3, " ")}) produced a Blob of ${event.data.size}bytes`);
+      counter++;
+    };
+
+    recorder.onstop = onRecorderStopped;
+  }
+
+  function startProcess() {
+    if(fullStream === undefined) {
+      initStreams();
+    }
+
+    initMediaRecorder();
+    startRecordingAndStopWithDelay();
+
+    running = true;
+  }
+
+  function startRecordingAndStopWithDelay() {
+    recorder.start();
+    intervalID = setTimeout(() => recorder.stop(), 200);
+  }
+
+  function stopProcess() {
+    clearInterval(intervalID);
+
+    recorder.stop();
+    running = false;
+  }
+
+  function onRecorderStopped() {
+    if(running) {
+      startRecordingAndStopWithDelay();
+    }
+  }
+
+  // Buttons
+  startButton.addEventListener("click", () => {
+    startButton.setAttribute("disabled", true);
+    stopButton.removeAttribute("disabled");
+
+    startProcess();
+  });
+
+  stopButton.addEventListener("click", () => {
+    stopButton.setAttribute("disabled", true);
+    startButton.removeAttribute("disabled");
+
+    stopProcess();
+  });
+
+  // Canvas to be captured
+  function getVideoTrack() {
+    const ctx = document.createElement("canvas").getContext("2d");
+    const img = new ImageData(300, 150);
+    const arr = new Uint32Array(img.data.buffer);
+    draw();
+    return ctx.canvas.captureStream().getVideoTracks()[0];
+
+    function draw() {
+      for (let i = 0; i < arr.length; i++) {
+        arr[i] = Math.random() * 0xFFFFFF + 0xFF000000;
+      }
+      ctx.putImageData(img, 0, 0);
+      requestAnimationFrame(draw);
+    }
+  }
+
+  // Log
+  function log(message) {
+    logElement.textContent = `${message}\n${logElement.textContent}`;
+  }
+</script>
+
+</html>
